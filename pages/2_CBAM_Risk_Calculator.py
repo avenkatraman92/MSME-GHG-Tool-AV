@@ -27,6 +27,50 @@ RED_HEX    = "#C0392B"
 AMBER_HEX  = "#D4880A"
 GREEN_HEX  = "#27AE60"
 
+# ── CN code mapping (EU Combined Nomenclature, CBAM Annex I) ──────────────────
+CN_CODES = {
+    "Iron & Steel": {
+        "Hot-rolled flat products (BF-BOF route)":   "7208, 7209, 7210, 7211, 7212, 7225, 7226",
+        "Cold-rolled flat products (BF-BOF route)":  "7209, 7210, 7211, 7212, 7225, 7226",
+        "Structural steel / Rebar (BF-BOF route)":   "7213, 7214, 7215, 7216, 7227, 7228",
+        "Structural steel / Rebar (EAF route)":      "7213, 7214, 7215, 7216, 7227, 7228",
+        "Stainless steel":                           "7219, 7220, 7221, 7222",
+        "Pipes & tubes":                             "7304, 7305, 7306, 7307",
+        "Other iron & steel products":               "7207, 7217, 7218, 7223, 7224, 7229, 7301, 7318, 7326",
+    },
+    "Aluminium": {
+        "Primary aluminium — coal-heavy grid":       "7601 10",
+        "Primary aluminium — mixed grid":            "7601 10",
+        "Secondary / recycled aluminium":            "7601 20",
+        "Aluminium alloys (primary input)":          "7601 20",
+        "Aluminium semi-fabricated products":        "7604, 7605, 7606, 7607, 7608, 7609",
+    },
+    "Cement": {
+        "Ordinary Portland Cement (OPC)":            "2523 29 00",
+        "Portland Pozzolana Cement (PPC)":           "2523 29 00",
+        "Clinker":                                   "2523 10 00",
+        "Other blended cement":                      "2523 90 00",
+    },
+    "Fertilisers": {
+        "Ammonia":                                   "2814 10 00, 2814 20 00",
+        "Urea":                                      "3102 10",
+        "Ammonium nitrate":                          "3102 30",
+        "Mixed NPK fertilisers":                     "3105 20, 3105 51, 3105 59",
+        "Nitric acid":                               "2808 00",
+    },
+    "Hydrogen": {
+        "Grey hydrogen (SMR, no CCS)":               "2804 10 00",
+        "Blue hydrogen (SMR + CCS)":                 "2804 10 00",
+        "Green hydrogen (renewable)":                "2804 10 00",
+    },
+    "Electricity": {
+        "India grid average":                        "2716 00 00",
+        "Coal-based generation":                     "2716 00 00",
+        "Gas-based generation":                      "2716 00 00",
+        "Renewable electricity":                     "2716 00 00",
+    },
+}
+
 # ── Sector catalogue ──────────────────────────────────────────────────────────
 # Emission intensity: tCO2e per tonne of product (or tCO2e per MWh for electricity)
 SECTORS = {
@@ -96,14 +140,339 @@ SECTORS = {
     },
 }
 
+# ── Precursor materials by sector → product ───────────────────────────────────
+# Each precursor: name, CN code, unit, default_intensity (tCO2e/unit),
+#                 typical_ratio (units of precursor per unit of product),
+#                 source, note
+PRECURSORS = {
+    "Iron & Steel": {
+        "Hot-rolled flat products (BF-BOF route)": [
+            {
+                "name": "Pig Iron / Hot Metal",
+                "cn": "7201",
+                "unit": "tonne",
+                "default_intensity": 1.35,
+                "typical_ratio": 1.10,
+                "source": "BEE India; World Steel Association",
+                "note": "Primary BF-BOF input; carries significant embedded carbon from coking coal. "
+                        "~1.1 t pig iron per t HRC is typical for India.",
+            },
+            {
+                "name": "Scrap Steel",
+                "cn": "7204",
+                "unit": "tonne",
+                "default_intensity": 0.06,
+                "typical_ratio": 0.10,
+                "source": "World Steel Association",
+                "note": "Used as coolant / chemistry adjustment in BOF converter. Low embedded intensity.",
+            },
+        ],
+        "Cold-rolled flat products (BF-BOF route)": [
+            {
+                "name": "Hot-rolled Coil (HRC)",
+                "cn": "7208, 7225",
+                "unit": "tonne",
+                "default_intensity": 2.30,
+                "typical_ratio": 1.05,
+                "source": "IEA; BEE India",
+                "note": "Primary input to cold-rolling. Embedded emissions of the upstream HR process are fully "
+                        "included under CBAM for cold-rolled products.",
+            },
+        ],
+        "Structural steel / Rebar (BF-BOF route)": [
+            {
+                "name": "Pig Iron / Hot Metal",
+                "cn": "7201",
+                "unit": "tonne",
+                "default_intensity": 1.35,
+                "typical_ratio": 1.05,
+                "source": "BEE India; World Steel Association",
+                "note": "Dominant input in BF-BOF long product route.",
+            },
+            {
+                "name": "Scrap Steel",
+                "cn": "7204",
+                "unit": "tonne",
+                "default_intensity": 0.06,
+                "typical_ratio": 0.08,
+                "source": "World Steel Association",
+                "note": "Minor scrap addition to BOF converter.",
+            },
+        ],
+        "Structural steel / Rebar (EAF route)": [
+            {
+                "name": "Scrap Steel",
+                "cn": "7204",
+                "unit": "tonne",
+                "default_intensity": 0.06,
+                "typical_ratio": 0.85,
+                "source": "World Steel Association",
+                "note": "Primary EAF input. India's EAF route uses ~85% scrap on average. "
+                        "Scrap intensity is very low as re-melting avoids primary ironmaking emissions.",
+            },
+            {
+                "name": "Direct Reduced Iron (DRI / Sponge Iron)",
+                "cn": "7203",
+                "unit": "tonne",
+                "default_intensity": 0.70,
+                "typical_ratio": 0.25,
+                "source": "IEA; Midrex; SPONGE India",
+                "note": "Coal-based DRI (dominant in India) has intensity ~0.70 tCO₂e/t; "
+                        "gas-based DRI is lower (~0.40 tCO₂e/t). Used to dilute tramp elements in scrap.",
+            },
+        ],
+        "Stainless steel": [
+            {
+                "name": "Pig Iron / Hot Metal",
+                "cn": "7201",
+                "unit": "tonne",
+                "default_intensity": 1.35,
+                "typical_ratio": 0.60,
+                "source": "International Stainless Steel Forum (ISSF)",
+                "note": "Base iron input. Actual ratio varies by grade (austenitic vs ferritic).",
+            },
+            {
+                "name": "Ferro-alloys (Cr, Ni, Mn)",
+                "cn": "7202",
+                "unit": "tonne",
+                "default_intensity": 4.50,
+                "typical_ratio": 0.25,
+                "source": "ISSF; Outokumpu LCA data",
+                "note": "High embedded carbon. Chromium ferro-alloy is the most significant contributor. "
+                        "Intensity varies widely by alloy type (3–8 tCO₂e/t).",
+            },
+            {
+                "name": "Scrap Steel (stainless)",
+                "cn": "7204",
+                "unit": "tonne",
+                "default_intensity": 0.06,
+                "typical_ratio": 0.35,
+                "source": "ISSF",
+                "note": "High stainless scrap re-use rate in modern EAF shops reduces overall liability.",
+            },
+        ],
+        "Pipes & tubes": [
+            {
+                "name": "Hot-rolled Strip / Skelp",
+                "cn": "7208, 7211",
+                "unit": "tonne",
+                "default_intensity": 2.30,
+                "typical_ratio": 1.06,
+                "source": "IEA; BEE India",
+                "note": "Flat-rolled skelp is the primary input for ERW / SAW pipe production. "
+                        "Embedded emissions of upstream HR process flow through.",
+            },
+        ],
+        "Other iron & steel products": [
+            {
+                "name": "Steel Billets / Blooms / Slabs",
+                "cn": "7207",
+                "unit": "tonne",
+                "default_intensity": 1.80,
+                "typical_ratio": 1.05,
+                "source": "World Steel Association",
+                "note": "Semi-finished steel as input to downstream forming operations.",
+            },
+        ],
+    },
+    "Aluminium": {
+        "Primary aluminium — coal-heavy grid": [
+            {
+                "name": "Alumina (Al₂O₃)",
+                "cn": "2818 20",
+                "unit": "tonne",
+                "default_intensity": 1.03,
+                "typical_ratio": 1.93,
+                "source": "IAI Life Cycle Assessment; Bayer process average",
+                "note": "~1.93 t alumina required per t of primary aluminium (Hall-Héroult). "
+                        "Bayer process energy drives the 1.03 tCO₂e/t intensity.",
+            },
+        ],
+        "Primary aluminium — mixed grid": [
+            {
+                "name": "Alumina (Al₂O₃)",
+                "cn": "2818 20",
+                "unit": "tonne",
+                "default_intensity": 1.03,
+                "typical_ratio": 1.93,
+                "source": "IAI Life Cycle Assessment",
+                "note": "~1.93 t alumina required per t of primary aluminium.",
+            },
+        ],
+        "Secondary / recycled aluminium": [
+            {
+                "name": "Aluminium Scrap",
+                "cn": "7602",
+                "unit": "tonne",
+                "default_intensity": 0.05,
+                "typical_ratio": 1.05,
+                "source": "IAI; European Aluminium Association",
+                "note": "Secondary smelting has very low embedded intensity vs primary route. "
+                        "~1.05 t scrap per t secondary aluminium (process loss).",
+            },
+        ],
+        "Aluminium alloys (primary input)": [
+            {
+                "name": "Primary Aluminium Ingot",
+                "cn": "7601 10",
+                "unit": "tonne",
+                "default_intensity": 14.0,
+                "typical_ratio": 0.80,
+                "source": "IAI; BEE India",
+                "note": "Dominant embedded emission source in alloy production. "
+                        "Indian coal-heavy grid drives high intensity (~14 tCO₂e/t).",
+            },
+            {
+                "name": "Aluminium Scrap",
+                "cn": "7602",
+                "unit": "tonne",
+                "default_intensity": 0.05,
+                "typical_ratio": 0.25,
+                "source": "IAI",
+                "note": "Scrap additions reduce overall alloy liability significantly.",
+            },
+        ],
+        "Aluminium semi-fabricated products": [
+            {
+                "name": "Primary Aluminium Ingot",
+                "cn": "7601 10",
+                "unit": "tonne",
+                "default_intensity": 14.0,
+                "typical_ratio": 1.05,
+                "source": "IAI; BEE India",
+                "note": "Dominant embedded emission source in semi-fabricated aluminium supply chain. "
+                        "Extrusion / rolling adds minimal direct emissions vs the ingot input.",
+            },
+        ],
+    },
+    "Cement": {
+        "Ordinary Portland Cement (OPC)": [
+            {
+                "name": "Clinker",
+                "cn": "2523 10",
+                "unit": "tonne",
+                "default_intensity": 0.87,
+                "typical_ratio": 0.95,
+                "source": "CMA India; GNR Database",
+                "note": "Clinker is the key CO₂-intensive precursor. OPC clinker factor is ~92–97%. "
+                        "Calcination of limestone accounts for ~60% of cement sector Scope 1 emissions.",
+            },
+        ],
+        "Portland Pozzolana Cement (PPC)": [
+            {
+                "name": "Clinker",
+                "cn": "2523 10",
+                "unit": "tonne",
+                "default_intensity": 0.87,
+                "typical_ratio": 0.70,
+                "source": "CMA India; GNR Database",
+                "note": "PPC replaces 25–35% clinker with fly ash (low-carbon substitute). "
+                        "Typical clinker factor in India: 68–73%.",
+            },
+        ],
+        "Clinker": [],  # Clinker is itself a simple good — no CBAM precursors above it
+        "Other blended cement": [
+            {
+                "name": "Clinker",
+                "cn": "2523 10",
+                "unit": "tonne",
+                "default_intensity": 0.87,
+                "typical_ratio": 0.65,
+                "source": "CMA India; GNR Database",
+                "note": "Slag and fly ash blended cements have lower clinker factors (55–75%). "
+                        "Adjust ratio to match your specific blend.",
+            },
+        ],
+    },
+    "Fertilisers": {
+        "Ammonia": [],  # Ammonia is itself a simple good — activity data method covers it
+        "Urea": [
+            {
+                "name": "Ammonia (NH₃)",
+                "cn": "2814 10",
+                "unit": "tonne",
+                "default_intensity": 2.30,
+                "typical_ratio": 0.57,
+                "source": "IFA; Yara LCA data",
+                "note": "~0.57 t ammonia per t urea (Haber-Bosch + CO₂ stripping). "
+                        "Largest single embedded emission source for urea producers.",
+            },
+        ],
+        "Ammonium nitrate": [
+            {
+                "name": "Ammonia (NH₃)",
+                "cn": "2814 10",
+                "unit": "tonne",
+                "default_intensity": 2.30,
+                "typical_ratio": 0.21,
+                "source": "IFA; European Fertilizers LCA",
+                "note": "Ammonia is reacted with nitric acid in the Ostwald neutralisation step.",
+            },
+            {
+                "name": "Nitric Acid (HNO₃)",
+                "cn": "2808 00",
+                "unit": "tonne",
+                "default_intensity": 7.50,
+                "typical_ratio": 0.79,
+                "source": "IFA; IPCC (N₂O emission factors)",
+                "note": "N₂O from nitric acid production (before abatement) is a very high GWP source. "
+                        "This drives the high embedded intensity. Catalytic abatement can reduce it significantly.",
+            },
+        ],
+        "Mixed NPK fertilisers": [
+            {
+                "name": "Ammonia (NH₃)",
+                "cn": "2814 10",
+                "unit": "tonne",
+                "default_intensity": 2.30,
+                "typical_ratio": 0.20,
+                "source": "IFA",
+                "note": "Nitrogen component precursor. Actual ratio depends on NPK grade (e.g. 10:26:26 vs 20:20:20).",
+            },
+            {
+                "name": "Nitric Acid (HNO₃)",
+                "cn": "2808 00",
+                "unit": "tonne",
+                "default_intensity": 7.50,
+                "typical_ratio": 0.15,
+                "source": "IFA",
+                "note": "Used for ammonium nitrate component in certain NPK grades. Adjust if not applicable.",
+            },
+        ],
+        "Nitric acid": [
+            {
+                "name": "Ammonia (NH₃)",
+                "cn": "2814 10",
+                "unit": "tonne",
+                "default_intensity": 2.30,
+                "typical_ratio": 0.29,
+                "source": "IFA; Yara",
+                "note": "Ammonia is catalytically oxidised (Ostwald process) to produce nitric acid. "
+                        "~0.29 t ammonia per t nitric acid (100% basis).",
+            },
+        ],
+    },
+    "Hydrogen": {
+        "Grey hydrogen (SMR, no CCS)":  [],  # Direct activity data (natural gas) captures this
+        "Blue hydrogen (SMR + CCS)":    [],
+        "Green hydrogen (renewable)":   [],
+    },
+    "Electricity": {
+        "India grid average":       [],
+        "Coal-based generation":    [],
+        "Gas-based generation":     [],
+        "Renewable electricity":    [],
+    },
+}
+
 # Fuel emission factors (tCO2e per unit) for activity-data method
 FUEL_FACTORS = {
-    "Diesel (litres)":           0.00268,
-    "LPG (kg)":                  0.00161,
-    "Natural Gas (SCM)":         0.00200,
-    "Coal (kg)":                 0.00242,
-    "Furnace Oil / HSD (litres)":0.00315,
-    "Petrol (litres)":           0.00231,
+    "Diesel (litres)":            0.00268,
+    "LPG (kg)":                   0.00161,
+    "Natural Gas (SCM)":          0.00200,
+    "Coal (kg)":                  0.00242,
+    "Furnace Oil / HSD (litres)": 0.00315,
+    "Petrol (litres)":            0.00231,
 }
 ELECTRICITY_FACTOR = 0.000716   # tCO2e per kWh (India CEA 2022-23)
 
@@ -128,7 +497,7 @@ def risk_label(liability_inr, revenue_inr):
         return "LOW", GREEN_HEX
 
 def sensitivity_table(embedded_emissions, domestic_price, eur_inr):
-    prices  = [30, 50, 70, 90, 110, 130]
+    prices = [30, 50, 70, 90, 110, 130]
     rows = []
     for p in prices:
         net = max(p - domestic_price, 0)
@@ -136,9 +505,9 @@ def sensitivity_table(embedded_emissions, domestic_price, eur_inr):
         lib_inr = lib_eur * eur_inr
         rows.append({
             "EU ETS Price (€/tCO₂e)": f"€{p}",
-            "Net Price (€/tCO₂e)": f"€{net:.0f}",
-            "Annual Liability (€)": f"€{lib_eur:,.0f}",
-            "Annual Liability (₹)": fmt_inr(lib_inr),
+            "Net Price (€/tCO₂e)":    f"€{net:.0f}",
+            "Annual Liability (€)":   f"€{lib_eur:,.0f}",
+            "Annual Liability (₹)":   fmt_inr(lib_inr),
         })
     return pd.DataFrame(rows), prices, [
         max(p - domestic_price, 0) * embedded_emissions * eur_inr / 1e7
@@ -191,8 +560,7 @@ def recommendations(sector, risk):
             "Renewable generation has near-zero CBAM liability — a strong market differentiator for EU buyers.",
         ],
     }
-    recs = base.get(risk, base["LOW"]) + sector_specific.get(sector, [])
-    return recs
+    return base.get(risk, base["LOW"]) + sector_specific.get(sector, [])
 
 # ── Sensitivity chart (matplotlib — also used in PDF) ─────────────────────────
 
@@ -207,9 +575,11 @@ def build_sensitivity_chart(prices, values_crore, current_ets, embedded, domesti
         else:
             bar_colors.append(GREEN_HEX)
 
-    bars = ax.bar([f"€{p}" for p in prices], values_crore, color=bar_colors, width=0.55, edgecolor="none")
+    bars = ax.bar([f"€{p}" for p in prices], values_crore,
+                  color=bar_colors, width=0.55, edgecolor="none")
     current_liability_crore = max(current_ets - domestic, 0) * embedded * eur_inr / 1e7
-    ax.axhline(current_liability_crore, color=OLIVE_HEX, linewidth=1.5, linestyle="--", label=f"Current (€{current_ets})")
+    ax.axhline(current_liability_crore, color=OLIVE_HEX, linewidth=1.5, linestyle="--",
+               label=f"Current (€{current_ets})")
     ax.set_xlabel("EU ETS Carbon Price", fontsize=9)
     ax.set_ylabel("Annual CBAM Liability (₹ Crore)", fontsize=9)
     ax.set_title("Sensitivity of CBAM Liability to EU ETS Price", fontsize=10, fontweight="bold")
@@ -236,12 +606,12 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
     )
 
     styles = getSampleStyleSheet()
-    brand   = ParagraphStyle("brand",   fontSize=18, textColor=colors.HexColor(OLIVE_HEX),  fontName="Helvetica-Bold", spaceAfter=2)
-    title_s = ParagraphStyle("title_s", fontSize=13, textColor=colors.HexColor(DARK_HEX),   fontName="Helvetica-Bold", spaceAfter=4)
-    meta_s  = ParagraphStyle("meta_s",  fontSize=8,  textColor=colors.grey,                 spaceAfter=2)
-    h2      = ParagraphStyle("h2",      fontSize=10, textColor=colors.HexColor(DARK_HEX),   fontName="Helvetica-Bold", spaceBefore=10, spaceAfter=4)
-    body_s  = ParagraphStyle("body_s",  fontSize=8.5, leading=13, spaceAfter=3)
-    bullet_s= ParagraphStyle("bullet",  fontSize=8.5, leading=13, leftIndent=12, spaceAfter=3)
+    brand    = ParagraphStyle("brand",   fontSize=18, textColor=colors.HexColor(OLIVE_HEX),  fontName="Helvetica-Bold", spaceAfter=2)
+    title_s  = ParagraphStyle("title_s", fontSize=13, textColor=colors.HexColor(DARK_HEX),   fontName="Helvetica-Bold", spaceAfter=4)
+    meta_s   = ParagraphStyle("meta_s",  fontSize=8,  textColor=colors.grey,                  spaceAfter=2)
+    h2       = ParagraphStyle("h2",      fontSize=10, textColor=colors.HexColor(DARK_HEX),   fontName="Helvetica-Bold", spaceBefore=10, spaceAfter=4)
+    body_s   = ParagraphStyle("body_s",  fontSize=8.5, leading=13, spaceAfter=3)
+    bullet_s = ParagraphStyle("bullet",  fontSize=8.5, leading=13, leftIndent=12, spaceAfter=3)
 
     TBL_HEADER = colors.HexColor(OLIVE_HEX)
     TBL_ALT    = colors.HexColor("#F5F5F5")
@@ -255,8 +625,12 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
     story += [
         Paragraph("Total Impact", brand),
         Paragraph("CBAM Risk Assessment", title_s),
-        Paragraph(f"Prepared: {date.today().strftime('%d %B %Y')}  |  "
-                  f"Sector: {inputs['sector']}  |  Product: {inputs['product']}", meta_s),
+        Paragraph(
+            f"Prepared: {date.today().strftime('%d %B %Y')}  |  "
+            f"Sector: {inputs['sector']}  |  Product: {inputs['product']}  |  "
+            f"CN Code(s): {inputs.get('cn_codes', 'N/A')}",
+            meta_s,
+        ),
         section_rule(),
         Spacer(1, 0.2*cm),
     ]
@@ -267,10 +641,11 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
         ["Parameter", "Value"],
         ["Sector", inputs["sector"]],
         ["Product Type", inputs["product"]],
+        ["CN Code(s)", inputs.get("cn_codes", "N/A")],
         ["Export Volume to EU", f"{inputs['volume']:,.0f} {inputs['unit']}/year"],
         ["Export Revenue (EU)", fmt_inr(inputs["revenue_inr"]) if inputs["revenue_inr"] > 0 else "Not provided"],
         ["Emission Intensity Method", inputs["intensity_method"]],
-        ["Emission Intensity", f"{inputs['intensity']:.3f} tCO₂e/{inputs['unit']}"],
+        ["Direct Emission Intensity", f"{inputs['intensity']:.3f} tCO₂e/{inputs['unit']}"],
         ["EU ETS Carbon Price", f"€{inputs['ets_price']}/tCO₂e"],
         ["Domestic Carbon Price (India)", f"€{inputs['domestic_price']}/tCO₂e"],
         ["EUR / INR Rate", f"1 € = ₹{inputs['eur_inr']}"],
@@ -291,9 +666,40 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
     ]))
     story += [tbl, Spacer(1, 0.3*cm)]
 
+    # ── Precursor breakdown (if any) ──
+    prec_breakdown = inputs.get("precursor_breakdown", [])
+    if prec_breakdown:
+        story.append(Paragraph("2. Precursor Embedded Emissions", h2))
+        prec_table_data = [["Precursor Material", "CN Code", "Qty (t/yr)", "Intensity\n(tCO₂e/t)", "Embedded\n(tCO₂e/yr)"]]
+        for row in prec_breakdown:
+            prec_table_data.append([
+                row["Precursor"],
+                row["CN Code"],
+                row["Quantity (t/yr)"],
+                row["Intensity (tCO₂e/t)"],
+                row["Embedded Emissions (tCO₂e/yr)"],
+            ])
+        prec_tbl = Table(prec_table_data, colWidths=[5*cm, 2.5*cm, 2.5*cm, 2.5*cm, 3.5*cm])
+        prec_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), TBL_HEADER),
+            ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
+            ("FONTNAME",   (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",   (0,0), (-1,-1), 7.5),
+            ("GRID",       (0,0), (-1,-1), 0.3, colors.lightgrey),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, TBL_ALT]),
+            ("ALIGN",      (1,0), (-1,-1), "CENTER"),
+            ("TOPPADDING",  (0,0), (-1,-1), 3),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+        ]))
+        story += [prec_tbl, Spacer(1, 0.3*cm)]
+        section_num = 3
+    else:
+        section_num = 2
+
     # ── Key results ──
-    story.append(Paragraph("2. Key Results", h2))
-    risk_color = {
+    story.append(Paragraph(f"{section_num}. Key Results", h2))
+    section_num += 1
+    risk_color_pdf = {
         "HIGH": colors.HexColor(RED_HEX),
         "MEDIUM": colors.HexColor(AMBER_HEX),
         "LOW": colors.HexColor(GREEN_HEX),
@@ -301,11 +707,17 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
 
     res_data = [
         ["Metric", "Value"],
+        ["Direct Production Emissions", f"{results['direct_emissions']:,.1f} tCO₂e/year"],
+    ]
+    if prec_breakdown:
+        res_data.append(["Precursor Embedded Emissions", f"{results['precursor_emissions']:,.1f} tCO₂e/year"])
+    res_data += [
         ["Total Embedded Emissions", f"{results['embedded']:,.1f} tCO₂e/year"],
         ["CBAM Certificates Required", f"{results['embedded']:,.1f} certificates/year"],
         ["Annual Liability (EUR)", f"€{results['liability_eur']:,.0f}"],
         ["Annual Liability (INR)", fmt_inr(results["liability_inr"])],
-        ["Revenue Impact", f"{results['pct_revenue']:.1f}% of EU export revenue" if results["pct_revenue"] else "Revenue not provided"],
+        ["Revenue Impact", f"{results['pct_revenue']:.1f}% of EU export revenue"
+                           if results["pct_revenue"] else "Revenue not provided"],
         ["Risk Rating", results["risk"]],
     ]
     tbl2 = Table(res_data, colWidths=[7*cm, 9*cm])
@@ -318,7 +730,7 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
         ("BACKGROUND", (0,1), (0,-1), TBL_ALT),
         ("FONTNAME",   (0,1), (0,-1), "Helvetica-Bold"),
         ("FONTNAME",   (0,risk_row), (-1,risk_row), "Helvetica-Bold"),
-        ("TEXTCOLOR",  (1,risk_row), (1,risk_row), risk_color),
+        ("TEXTCOLOR",  (1,risk_row), (1,risk_row), risk_color_pdf),
         ("FONTSIZE",   (1,risk_row), (1,risk_row), 10),
         ("GRID",       (0,0), (-1,-1), 0.3, colors.lightgrey),
         ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, TBL_ALT]),
@@ -328,7 +740,8 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
     story += [tbl2, Spacer(1, 0.3*cm)]
 
     # ── Sensitivity chart ──
-    story.append(Paragraph("3. Sensitivity Analysis", h2))
+    story.append(Paragraph(f"{section_num}. Sensitivity Analysis", h2))
+    section_num += 1
     fig = build_sensitivity_chart(
         sens_prices, sens_values,
         inputs["ets_price"], results["embedded"],
@@ -340,7 +753,6 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
     chart_buf.seek(0)
     story += [Image(chart_buf, width=14*cm, height=7*cm), Spacer(1, 0.2*cm)]
 
-    # Sensitivity table
     sens_table_data = [list(sens_df.columns)] + sens_df.values.tolist()
     tbl3 = Table(sens_table_data, colWidths=[3.5*cm, 3.5*cm, 4*cm, 4*cm])
     tbl3.setStyle(TableStyle([
@@ -357,7 +769,7 @@ def generate_pdf(inputs: dict, results: dict, sens_df: pd.DataFrame,
     story += [tbl3, Spacer(1, 0.3*cm)]
 
     # ── Recommendations ──
-    story.append(Paragraph("4. Recommendations", h2))
+    story.append(Paragraph(f"{section_num}. Recommendations", h2))
     for rec in recs:
         story.append(Paragraph(f"• {rec}", bullet_s))
     story.append(Spacer(1, 0.3*cm))
@@ -404,9 +816,21 @@ st.header("1. Product & Export Information")
 
 col1, col2 = st.columns(2)
 with col1:
-    sector = st.selectbox("CBAM Sector", list(SECTORS.keys()))
+    sector  = st.selectbox("CBAM Sector", list(SECTORS.keys()))
     product = st.selectbox("Product Type", list(SECTORS[sector]["products"].keys()))
-    unit = SECTORS[sector]["unit"]
+    unit    = SECTORS[sector]["unit"]
+
+    # CN code display
+    cn_codes = CN_CODES.get(sector, {}).get(product, "")
+    if cn_codes:
+        st.markdown(
+            f"<div style='background:#f0f4ea; border-left:3px solid {OLIVE_HEX}; "
+            f"padding:0.5rem 0.8rem; border-radius:3px; margin-top:0.4rem;'>"
+            f"<span style='font-size:0.8rem; color:#555;'>EU CN Code(s) — CBAM Annex I</span><br>"
+            f"<span style='font-family:monospace; font-weight:600; color:{DARK_HEX};'>{cn_codes}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
 with col2:
     volume = st.number_input(
@@ -422,10 +846,10 @@ with col2:
 st.divider()
 
 # ── Section 2: Emission Intensity ─────────────────────────────────────────────
-st.header("2. Emission Intensity")
+st.header("2. Direct Emission Intensity")
 
 intensity_method = st.radio(
-    "How do you want to determine your embedded emission intensity?",
+    "How do you want to determine your direct embedded emission intensity?",
     [
         "Use sector default (quick estimate)",
         "Enter my measured / verified intensity",
@@ -485,8 +909,88 @@ else:
 
 st.divider()
 
-# ── Section 3: CBAM Parameters ────────────────────────────────────────────────
-st.header("3. CBAM Parameters")
+# ── Section 3: Precursor Embedded Emissions ───────────────────────────────────
+st.header("3. Precursor Embedded Emissions")
+st.markdown(
+    "Under CBAM, **total embedded emissions** of complex goods include the emissions "
+    "from CBAM-covered **precursor materials** used in their production. "
+    "Select the precursor inputs applicable to your process."
+)
+
+available_precursors = PRECURSORS.get(sector, {}).get(product, [])
+precursor_emissions = 0.0
+precursor_breakdown = []
+
+if not available_precursors:
+    st.info(
+        f"No CBAM-covered precursor materials are defined for **{product}**. "
+        "Your total embedded emissions consist of direct production emissions only.",
+        icon="ℹ️",
+    )
+else:
+    precursor_names = [p["name"] for p in available_precursors]
+    selected_precursors = st.multiselect(
+        "Select precursor materials used in your production process:",
+        options=precursor_names,
+        default=precursor_names,   # default all selected — user can deselect
+        help="Only include precursors you actually use. De-select any that are not applicable."
+    )
+
+    if selected_precursors:
+        for prec in available_precursors:
+            if prec["name"] not in selected_precursors:
+                continue
+
+            with st.expander(f"**{prec['name']}** — CN {prec['cn']}", expanded=True):
+                st.caption(f"ℹ️ {prec['note']}")
+                pc1, pc2, pc3 = st.columns([2, 2, 1])
+
+                with pc1:
+                    prec_qty = st.number_input(
+                        f"Quantity used ({prec['unit']}/year)",
+                        min_value=0.0,
+                        value=float(round(volume * prec["typical_ratio"], 1)),
+                        step=10.0,
+                        key=f"prec_qty_{prec['name']}",
+                        help=f"Typical ratio: ~{prec['typical_ratio']:.2f} {prec['unit']} per {unit} of {product}"
+                    )
+                    st.caption(f"Typical ratio: ~{prec['typical_ratio']:.2f} {prec['unit']}/{unit} of output")
+
+                with pc2:
+                    prec_intensity = st.number_input(
+                        f"Emission intensity (tCO₂e/{prec['unit']})",
+                        min_value=0.0,
+                        value=float(prec["default_intensity"]),
+                        step=0.01,
+                        format="%.3f",
+                        key=f"prec_int_{prec['name']}",
+                        help=f"Source: {prec['source']}"
+                    )
+                    st.caption(f"Source: {prec['source']}")
+
+                with pc3:
+                    prec_embedded = prec_qty * prec_intensity
+                    st.metric("Embedded (tCO₂e/yr)", f"{prec_embedded:,.1f}")
+
+                precursor_emissions += prec_embedded
+                precursor_breakdown.append({
+                    "Precursor": prec["name"],
+                    "CN Code": prec["cn"],
+                    "Quantity (t/yr)": f"{prec_qty:,.1f}",
+                    "Intensity (tCO₂e/t)": f"{prec_intensity:.3f}",
+                    "Embedded Emissions (tCO₂e/yr)": f"{prec_embedded:,.1f}",
+                })
+
+        if precursor_breakdown:
+            st.success(
+                f"**Total precursor embedded emissions: {precursor_emissions:,.1f} tCO₂e/year**  \n"
+                f"This will be added to your direct production emissions in the results below."
+            )
+
+st.divider()
+
+# ── Section 4: CBAM Parameters ────────────────────────────────────────────────
+st.header("4. CBAM Parameters")
 
 col3, col4, col5 = st.columns(3)
 with col3:
@@ -513,23 +1017,34 @@ boundary_approach = st.selectbox(
 
 st.divider()
 
-# ── Section 4: Results ────────────────────────────────────────────────────────
-st.header("4. Results")
+# ── Section 5: Results ────────────────────────────────────────────────────────
+st.header("5. Results")
 
 if volume <= 0:
     st.warning("Enter a non-zero export volume above to see results.")
 else:
-    embedded     = volume * intensity
-    net_price    = max(ets_price - domestic_price, 0)
-    liability_eur = embedded * net_price
-    liability_inr = liability_eur * eur_inr
-    pct_revenue  = (liability_inr / revenue_inr * 100) if revenue_inr > 0 else None
-    risk, risk_color = risk_label(liability_inr, revenue_inr)
+    direct_emissions  = volume * intensity
+    embedded          = direct_emissions + precursor_emissions
+    net_price         = max(ets_price - domestic_price, 0)
+    liability_eur     = embedded * net_price
+    liability_inr     = liability_eur * eur_inr
+    pct_revenue       = (liability_inr / revenue_inr * 100) if revenue_inr > 0 else None
+    risk, risk_color  = risk_label(liability_inr, revenue_inr)
 
-    # Key metrics
+    # Emissions breakdown
+    if precursor_breakdown:
+        em1, em2, em3 = st.columns(3)
+        em1.metric("Direct Production Emissions", f"{direct_emissions:,.1f} tCO₂e/yr")
+        em2.metric("Precursor Embedded Emissions", f"{precursor_emissions:,.1f} tCO₂e/yr")
+        em3.metric("Total Embedded Emissions", f"{embedded:,.1f} tCO₂e/yr",
+                   delta=f"+{precursor_emissions:,.1f} from precursors", delta_color="inverse")
+    else:
+        st.metric("Total Embedded Emissions", f"{embedded:,.1f} tCO₂e/yr")
+
+    # Key liability metrics
     mc1, mc2, mc3, mc4 = st.columns(4)
-    mc1.metric("Embedded Emissions", f"{embedded:,.1f} tCO₂e/yr")
-    mc2.metric("CBAM Certificates", f"{embedded:,.1f}/yr")
+    mc1.metric("CBAM Certificates Required", f"{embedded:,.1f}/yr")
+    mc2.metric("Net Carbon Price", f"€{net_price:.0f}/tCO₂e")
     mc3.metric("Annual Liability (€)", f"€{liability_eur:,.0f}")
     mc4.metric("Annual Liability (₹)", fmt_inr(liability_inr))
 
@@ -537,7 +1052,7 @@ else:
         st.caption(f"This represents **{pct_revenue:.1f}%** of your stated EU export revenue.")
 
     # Risk rating banner
-    risk_bg = {"HIGH": "#FDECEA", "MEDIUM": "#FEF9E7", "LOW": "#EAFAF1"}[risk]
+    risk_bg   = {"HIGH": "#FDECEA", "MEDIUM": "#FEF9E7", "LOW": "#EAFAF1"}[risk]
     risk_icon = {"HIGH": "🔴", "MEDIUM": "🟡", "LOW": "🟢"}[risk]
     st.markdown(
         f"""
@@ -617,11 +1132,16 @@ else:
         "revenue_inr": revenue_inr, "intensity_method": intensity_method,
         "intensity": intensity, "ets_price": ets_price,
         "domestic_price": domestic_price, "eur_inr": eur_inr,
-        "boundary": boundary_approach,
+        "boundary": boundary_approach, "cn_codes": cn_codes,
+        "precursor_breakdown": precursor_breakdown,
     }
     pdf_results = {
-        "embedded": embedded, "liability_eur": liability_eur,
-        "liability_inr": liability_inr, "risk": risk,
+        "direct_emissions": direct_emissions,
+        "precursor_emissions": precursor_emissions,
+        "embedded": embedded,
+        "liability_eur": liability_eur,
+        "liability_inr": liability_inr,
+        "risk": risk,
         "pct_revenue": pct_revenue,
     }
 

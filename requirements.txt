@@ -4,4 +4,8 @@ openpyxl
 plotly
 matplotlib
 reportlab
+pyyaml
+graphviz
+python-docx
+jinja2
 

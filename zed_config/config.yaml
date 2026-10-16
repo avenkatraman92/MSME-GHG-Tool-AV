@@ -1,0 +1,78 @@
+steps:
+  - id: 1
+    short: "Unit Details"
+    full: "Basic unit details"
+  - id: 2
+    short: "Org Chart"
+    full: "Organisation chart & leadership"
+  - id: 3
+    short: "Policies"
+    full: "Quality, Environment & OHS policies"
+  - id: 4
+    short: "Process Flow"
+    full: "Process flow chart"
+  - id: 5
+    short: "Registers"
+    full: "Registers & records"
+  - id: 6
+    short: "Photos"
+    full: "Site photos"
+  - id: 7
+    short: "Evidence Pack"
+    full: "Download evidence pack"
+
+default_org_roles:
+  - name: ""
+    designation: "Owner / MD"
+    reports_to: "— (Top level)"
+    responsibilities: "Overall management, strategy, compliance approvals, customer relationships"
+  - name: ""
+    designation: "Plant Manager"
+    reports_to: "Owner / MD"
+    responsibilities: "Daily production planning, resource allocation, operational decisions"
+  - name: ""
+    designation: "Production Supervisor"
+    reports_to: "Plant Manager"
+    responsibilities: "Supervise shop floor operations, ensure shift targets and quality during production"
+  - name: ""
+    designation: "Quality Incharge"
+    reports_to: "Plant Manager"
+    responsibilities: "Incoming, in-process and final inspection, calibration, customer complaints"
+  - name: ""
+    designation: "Stores"
+    reports_to: "Plant Manager"
+    responsibilities: "Receive, store and issue raw materials and finished goods, maintain inventory records"
+  - name: ""
+    designation: "Maintenance"
+    reports_to: "Plant Manager"
+    responsibilities: "Preventive and breakdown maintenance of machines and utilities"
+  - name: ""
+    designation: "Safety Coordinator"
+    reports_to: "Owner / MD"
+    responsibilities: "Safety inspections, PPE issue, fire drills, accident register, safety training"
+  - name: ""
+    designation: "Accounts"
+    reports_to: "Owner / MD"
+    responsibilities: "Billing, payments, statutory compliance (GST, labour laws), financial records"
+
+demo_unit:
+  unit_name: "Demo Gears Pvt Ltd"
+  udyam: "DEMO-GEARS-001"
+  size_class: "Small"
+  nic_code: "28991"
+  address: "Plot 42, Butibori Industrial Area, Nagpur, Maharashtra 441108"
+  main_products: "Precision gears, shafts, CNC machined components"
+  main_customers: "Bajaj Auto, Endurance Technologies, Tier-1 auto suppliers"
+  employees_men: 22
+  employees_women: 3
+  shifts: 2
+  owner_name: "Rajesh Sharma"
+  owned_by_women: false
+  owned_by_sc: false
+  owned_by_st: false
+  licences:
+    cte_cto: {has: "Not applicable"}
+    factory: {has: "Yes", number: "NMC-FAC-2024-0042", expiry: "2026-03-31"}
+    fire_noc: {has: "Yes", number: "FIRE-NOC-2023-1187", expiry: "2025-06-30"}
+    other: {has: "No"}
+  existing_certs: []
